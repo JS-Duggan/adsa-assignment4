@@ -5,11 +5,11 @@
 #include <climits>
 
 struct Edge {
-    int weight;
+    int destroy;
     int x;
     int y;
 
-    Edge(int x, int y, int w) : x(x), y(y), weight(w){};
+    Edge(int x, int y, int d) : x(x), y(y), destroy(d){};
     Edge(){};
 };
 
@@ -31,9 +31,9 @@ int convert(char c) { /* helper function to convert char value to edge weight */
     return x - 6;
 }
 
-struct EdgeComp { /* comparator for pq to compare edge weights */
+struct CompDestroy { /* comparator for pq to compare edge weights */
     bool operator()(Edge const &a, Edge const &b) {
-        return a.weight < b.weight;
+        return a.destroy < b.destroy;
     }
 };
 
@@ -61,12 +61,12 @@ void Graph::readGraph() {
 }
 
 int primModified(std::vector<bool> &inTree, Graph &g, int start) {
-    std::priority_queue<Edge, std::vector<Edge>, EdgeComp> pq;
+    std::priority_queue<Edge, std::vector<Edge>, CompDestroy> pq;
     std::vector<int> distance(g.nvertices, INT_MAX);
     for (auto edge : g.edges[start]) {
-        if (!inTree[edge.y] && distance[edge.y] > edge.weight) {
+        if (!inTree[edge.y] && distance[edge.y] > edge.destroy) {
             pq.push(edge);
-            distance[edge.y] = edge.weight;
+            distance[edge.y] = edge.destroy;
         }
     }
 
@@ -78,18 +78,17 @@ int primModified(std::vector<bool> &inTree, Graph &g, int start) {
     while (!pq.empty()) {
         vertex = pq.top();
         pq.pop();
-
         if (!inTree[vertex.y]) {
-            std::cout << "Edge (" << vertex.x << "," << vertex.y << ")" << std::endl;
-            weight += vertex.weight;
             inTree[vertex.y] = true;
-
-            for (auto edge : g.edges[start]) {
-                if (!inTree[edge.y] && distance[edge.y] > edge.weight) {
+            for (auto edge : g.edges[vertex.y]) {
+                if (!inTree[edge.y] && distance[edge.y] < edge.destroy) {
                     pq.push(edge);
-                    distance[edge.y] = edge.weight;
+                    distance[edge.y] = edge.destroy;
                 }
             }
+        } else {
+            std::cout << "Remove back edge: " << vertex.x << "," << vertex.y << std::endl;
+            weight += vertex.destroy;
         }
     }
     return weight;
@@ -100,11 +99,11 @@ int main() {
     g.readGraph();
     std::vector<bool> inTree(g.nvertices, false);
     int comp = 0;
+    int cost = primModified(inTree, g, 0);
+    std::cout << "cost: " << cost << std::endl;
     for (int i = 0; i < g.nvertices; i++) {
-        if (!inTree[i]) {
-            comp++;
-            std::cout << comp << std::endl;
-            primModified(inTree, g, i);
+        for (auto edge : g.edges[i]) {
+            std::cout << "Edge (" << edge.x << "," << edge.y << "): " << edge.destroy << std::endl;
         }
     }
 }
