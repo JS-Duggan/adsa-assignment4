@@ -6,17 +6,17 @@
 #include <numeric>
 
 struct Edge {
-    int destroy;
+    int weight;
     int x;
     int y;
 
-    Edge(int x, int y, int d) : x(x), y(y), destroy(d){};
+    Edge(int x, int y, int w) : x(x), y(y), weight(w){};
     Edge(){};
 };
 
 struct Graph {
-    std::vector<std::vector<Edge>> edges;
-    std::vector<std::vector<Edge>> cost;             
+    std::vector<std::vector<Edge>> edges;               /* adjacency list for Prim's */
+    std::vector<Edge> cost;                             /* edge list for Kruskal's */
     int nvertices;                                      /* number of vertices in graph */
     int nedges;                                         /* number of edges in graph */
     bool directed;                                      /* is the graph directed */
@@ -34,31 +34,32 @@ int convert(char c) { /* helper function to convert char value to edge weight */
 
 struct CompDestroy { /* comparator for pq to compare edge weights */
     bool operator()(Edge const &a, Edge const &b) {
-        return a.destroy < b.destroy;
+        return a.weight < b.weight;
     }
 };
 
 void Graph::readGraph() {
+    /* expected input format is twoo strings representing edge matrix
+    i.e.: 011,101,110 ABB,BAB,BBA ABB,BAB,BBA is existing edges, cost \
+    to destroy, cost to build*/
     std::string c, b, d;
     std::cin >> c >> b >> d;
     nvertices = c.find(',');
     if (nvertices < 0) {
         return;
     }
-    edges = std::vector<std::vector<Edge>>(nvertices);
-    cost = std::vector<std::vector<Edge>>(nvertices);
+    edges = std::vector<std::vector<Edge>>(nvertices); 
     int index, destroy, build;
     for (int i = 0; i < nvertices; i++) {
         for (int j = i + 1; j < nvertices; j++) {
             index = ((nvertices + 1) * i) + j;
             if (c[index] - '0') {
                 destroy = convert(d[index]);
-                build = convert(b[index]);
                 edges[i].push_back(Edge(i, j, destroy));
                 edges[j].push_back(Edge(j, i, destroy));
-                cost[i].push_back(Edge(i, j, build));
-                cost[j].push_back(Edge(j, i, build));
             }
+            build = convert(b[index]);
+            cost.push_back(Edge(i, j, build));
         }
     }
 }
@@ -68,9 +69,9 @@ int primModified(std::vector<bool> &inTree, std::vector<int> &parent, Graph &g, 
     std::vector<int> distance(g.nvertices, INT_MIN);
 
     for (auto edge : g.edges[start]) {
-        if (!inTree[edge.y] && distance[edge.y] < edge.destroy) {
+        if (!inTree[edge.y] && distance[edge.y] < edge.weight) {
             pq.push(edge);
-            distance[edge.y] = edge.destroy;
+            distance[edge.y] = edge.weight;
         }
     }
 
@@ -88,13 +89,13 @@ int primModified(std::vector<bool> &inTree, std::vector<int> &parent, Graph &g, 
             parent[vertex.y] = vertex.x;
             std::cout << "edge " << vertex.x << "->" << vertex.y << " added" << std::endl;
             for (auto edge : g.edges[vertex.y]) {
-                if (!inTree[edge.y] && distance[edge.y] < edge.destroy) {
+                if (!inTree[edge.y] && distance[edge.y] < edge.weight) {
                     pq.push(edge);
-                    distance[edge.y] = edge.destroy;
+                    distance[edge.y] = edge.weight;
                 }
             }
         } else {
-            weight += vertex.destroy; /* cost of removing back edge */
+            weight += vertex.weight; /* cost of removing back edge */
         }
     }
 
