@@ -3,6 +3,7 @@
 #include <string>
 #include <queue>
 #include <climits>
+#include <numeric>
 
 struct Edge {
     int destroy;
@@ -41,7 +42,9 @@ void Graph::readGraph() {
     std::string c, b, d;
     std::cin >> c >> b >> d;
     nvertices = c.find(',');
-
+    if (nvertices < 0) {
+        return;
+    }
     edges = std::vector<std::vector<Edge>>(nvertices);
     cost = std::vector<std::vector<Edge>>(nvertices);
     int index, destroy, build;
@@ -60,9 +63,10 @@ void Graph::readGraph() {
     }
 }
 
-int primModified(std::vector<bool> &inTree, Graph &g, int start) {
+int primModified(std::vector<bool> &inTree, std::vector<int> &parent, Graph &g, int start) {
     std::priority_queue<Edge, std::vector<Edge>, CompDestroy> pq;
     std::vector<int> distance(g.nvertices, INT_MAX);
+
     for (auto edge : g.edges[start]) {
         if (!inTree[edge.y] && distance[edge.y] > edge.destroy) {
             pq.push(edge);
@@ -70,9 +74,10 @@ int primModified(std::vector<bool> &inTree, Graph &g, int start) {
         }
     }
 
-    int weight = 0;
     inTree[start] = true;
+    parent[start] = start;
     distance[start] = 0;
+    int weight = 0;
     Edge vertex;
 
     while (!pq.empty()) {
@@ -80,6 +85,7 @@ int primModified(std::vector<bool> &inTree, Graph &g, int start) {
         pq.pop();
         if (!inTree[vertex.y]) {
             inTree[vertex.y] = true;
+            parent[vertex.y] = vertex.x;
             for (auto edge : g.edges[vertex.y]) {
                 if (!inTree[edge.y] && distance[edge.y] < edge.destroy) {
                     pq.push(edge);
@@ -87,23 +93,35 @@ int primModified(std::vector<bool> &inTree, Graph &g, int start) {
                 }
             }
         } else {
-            std::cout << "Remove back edge: " << vertex.x << "," << vertex.y << std::endl;
-            weight += vertex.destroy;
+            weight += vertex.destroy; /* cost of removing back edge */
         }
     }
+
     return weight;
 }
 
 int main() {
     Graph g(true);
     g.readGraph();
-    std::vector<bool> inTree(g.nvertices, false);
-    int comp = 0;
-    int cost = primModified(inTree, g, 0);
-    std::cout << "cost: " << cost << std::endl;
-    for (int i = 0; i < g.nvertices; i++) {
-        for (auto edge : g.edges[i]) {
-            std::cout << "Edge (" << edge.x << "," << edge.y << "): " << edge.destroy << std::endl;
-        }
+    if (g.nvertices < 0) {
+        std::cout << 0 << std::endl;
+        return 0;
     }
+    std::vector<bool> inTree(g.nvertices, false);
+    std::vector<int> parent(g.nvertices);
+    std::iota(parent.begin(), parent.end(), 0);
+    int comp = 1;
+    int cost = 0;
+
+    for (int i = 0; i < g.nvertices; i++) {
+        if (!inTree[i]) {
+            std::cout << "Component " << comp << ":" << std::endl;
+            comp++;
+            cost += primModified(inTree, parent, g, i);
+        }
+        std::cout << "  " << i << std::endl;
+    }
+    
+    
+    std::cout << "cost: " << cost << std::endl;
 }
