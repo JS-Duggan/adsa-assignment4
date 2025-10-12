@@ -65,10 +65,10 @@ void Graph::readGraph() {
 
 int primModified(std::vector<bool> &inTree, std::vector<int> &parent, Graph &g, int start) {
     std::priority_queue<Edge, std::vector<Edge>, CompDestroy> pq;
-    std::vector<int> distance(g.nvertices, INT_MAX);
+    std::vector<int> distance(g.nvertices, INT_MIN);
 
     for (auto edge : g.edges[start]) {
-        if (!inTree[edge.y] && distance[edge.y] > edge.destroy) {
+        if (!inTree[edge.y] && distance[edge.y] < edge.destroy) {
             pq.push(edge);
             distance[edge.y] = edge.destroy;
         }
@@ -86,6 +86,7 @@ int primModified(std::vector<bool> &inTree, std::vector<int> &parent, Graph &g, 
         if (!inTree[vertex.y]) {
             inTree[vertex.y] = true;
             parent[vertex.y] = vertex.x;
+            std::cout << "edge " << vertex.x << "->" << vertex.y << " added" << std::endl;
             for (auto edge : g.edges[vertex.y]) {
                 if (!inTree[edge.y] && distance[edge.y] < edge.destroy) {
                     pq.push(edge);
@@ -119,9 +120,7 @@ int main() {
             comp++;
             cost += primModified(inTree, parent, g, i);
         }
-        std::cout << "  " << i << std::endl;
     }
-    
     
     std::cout << "cost: " << cost << std::endl;
 }
