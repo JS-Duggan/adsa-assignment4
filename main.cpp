@@ -6,9 +6,9 @@
 #include <numeric>
 
 struct Edge {
-    int weight;
     int x;
     int y;
+    int weight;
 
     Edge(int x, int y, int w) : x(x), y(y), weight(w){};
     Edge(){};
@@ -88,7 +88,7 @@ void Graph::readGraph() {
     }
 }
 
-int primModified(std::vector<bool> &inTree, Graph &g, int start) {
+int primModified(std::vector<int> &parent, std::vector<bool> &inTree, Graph &g, int start) {
     std::priority_queue<Edge, std::vector<Edge>, CompDestroy> pq;
 
     for (auto edge : g.edges[start]) {
@@ -106,6 +106,7 @@ int primModified(std::vector<bool> &inTree, Graph &g, int start) {
         pq.pop();
         if (!inTree[vertex.y]) {
             inTree[vertex.y] = true;
+            parent[vertex.y] = vertex.x;
             for (auto edge : g.edges[vertex.y]) {
                 if (!inTree[edge.y]) {
                     pq.push(edge);
@@ -133,36 +134,13 @@ int main() {
 
     for (int i = 0; i < g.nvertices; i++) {
         if (!inTree[i]) {
-            cost += primModified(inTree, g, i);
+            cost += primModified(parent, inTree, g, i);
         }
     }
-    /* identify components using DFS */
-    std::vector<bool> visited(g.nvertices, false);
-    for (int i = 0; i < g.nvertices; i++) {
-        if (inTree[i] && !visited[i]) {
-            std::vector<int> component;
-            std::vector<int> stack;
-            stack.push_back(i);
-            visited[i] = true;
-            
-            while (!stack.empty()) {
-                int v = stack.back();
-                stack.pop_back();
-                component.push_back(v);
-                
-                for (auto edge : g.edges[v]) {
-                    if (inTree[edge.y] && !visited[edge.y]) {
-                        visited[edge.y] = true;
-                        stack.push_back(edge.y);
-                    }
-                }
-            }
-            
-            for (int v : component) {
-                parent[v] = i;
-            }
-        }
+    for (int i = 0; i < parent.size(); i++) {
+        parent[i] = find(parent, i);
     }
+    
     Edge edge;
     while (!g.cost.empty()) {
         edge = g.cost.top();
