@@ -88,20 +88,16 @@ void Graph::readGraph() {
     }
 }
 
-int primModified(std::vector<bool> &inTree, std::vector<int> &parent, Graph &g, int start) {
+int primModified(std::vector<bool> &inTree, Graph &g, int start) {
     std::priority_queue<Edge, std::vector<Edge>, CompDestroy> pq;
-    std::vector<int> distance(g.nvertices, INT_MIN);
 
     for (auto edge : g.edges[start]) {
-        if (!inTree[edge.y] && distance[edge.y] < edge.weight) {
+        if (!inTree[edge.y]) {
             pq.push(edge);
-            distance[edge.y] = edge.weight;
         }
     }
 
     inTree[start] = true;
-    parent[start] = start;
-    distance[start] = 0;
     int weight = 0;
     Edge vertex;
 
@@ -110,11 +106,9 @@ int primModified(std::vector<bool> &inTree, std::vector<int> &parent, Graph &g, 
         pq.pop();
         if (!inTree[vertex.y]) {
             inTree[vertex.y] = true;
-            parent[ find(parent, vertex.y) ] = find(parent, vertex.x);
             for (auto edge : g.edges[vertex.y]) {
-                if (!inTree[edge.y] && distance[edge.y] < edge.weight) {
+                if (!inTree[edge.y]) {
                     pq.push(edge);
-                    distance[edge.y] = edge.weight;
                 }
             }
         } else {
@@ -139,7 +133,34 @@ int main() {
 
     for (int i = 0; i < g.nvertices; i++) {
         if (!inTree[i]) {
-            cost += primModified(inTree, parent, g, i);
+            cost += primModified(inTree, g, i);
+        }
+    }
+    /* identify components using DFS */
+    std::vector<bool> visited(g.nvertices, false);
+    for (int i = 0; i < g.nvertices; i++) {
+        if (inTree[i] && !visited[i]) {
+            std::vector<int> component;
+            std::vector<int> stack;
+            stack.push_back(i);
+            visited[i] = true;
+            
+            while (!stack.empty()) {
+                int v = stack.back();
+                stack.pop_back();
+                component.push_back(v);
+                
+                for (auto edge : g.edges[v]) {
+                    if (inTree[edge.y] && !visited[edge.y]) {
+                        visited[edge.y] = true;
+                        stack.push_back(edge.y);
+                    }
+                }
+            }
+            
+            for (int v : component) {
+                parent[v] = i;
+            }
         }
     }
     Edge edge;
