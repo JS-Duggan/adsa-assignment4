@@ -137,7 +137,7 @@ int main() {
             cost += primModified(parent, inTree, g, i);
         }
     }
-    for (int i = 0; i < parent.size(); i++) {
+    for (size_t i = 0; i < parent.size(); i++) {
         parent[i] = find(parent, i);
     }
     
