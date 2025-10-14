@@ -35,18 +35,25 @@ bool sameComponent(std::vector<int> &parent, int index1, int index2) {
     return find(parent, index1) == find(parent, index2);
 }
 
-void unionSets(std::vector<int> &parent, int index1, int index2) {
+void unionSets(std::vector<int> &parent, std::vector<int> &size, int index1, int index2) {
     int root1 = find(parent, index1); /* find root of sets */
     int root2 = find(parent, index2);
 
     if (root1 == root2) return; /* already in same set */
 
-    parent[root2] = root1;
+    if (size[root1] >= size[root2]) {
+        size[root1] += size[root2];
+        parent[root2] = root1;
+    } else {
+        size[root2] += size[root1];
+        parent[root1] = root2;
+    }
 }
 
 struct Graph {
     std::vector<std::vector<Edge>> edges;                           /* adjacency list for Prim's */
     std::priority_queue<Edge, std::vector<Edge>, CompBuild> cost;   /* edge list for Kruskal's */
+    std::vector<int> size;                                          /* size of tree */
     int nvertices;                                                  /* number of vertices in graph */
     int nedges;                                                     /* number of edges in graph */
     bool directed;                                                  /* is the graph directed */
@@ -86,6 +93,7 @@ void Graph::readGraph() {
             cost.push(Edge(i, j, build));
         }
     }
+    size = std::vector<int>(nvertices, 1);
 }
 
 int primModified(std::vector<int> &parent, std::vector<bool> &inTree, Graph &g, int start) {
@@ -147,7 +155,7 @@ int main() {
         g.cost.pop();
         if (!sameComponent(parent, edge.x, edge.y)) {
             cost += edge.weight;
-            unionSets(parent, edge.x, edge.y);
+            unionSets(parent, g.size, edge.x, edge.y);
         }
     }
     
