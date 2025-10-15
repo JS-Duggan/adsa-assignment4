@@ -1,8 +1,6 @@
 #include <vector>
 #include <iostream>
-#include <string>
 #include <queue>
-#include <climits>
 #include <numeric>
 
 struct Edge {
@@ -12,18 +10,6 @@ struct Edge {
 
     Edge(int x, int y, int w) : x(x), y(y), weight(w){};
     Edge(){};
-};
-
-struct CompDestroy { /* comparator for pq to compare edge weights */
-    bool operator()(Edge const &a, Edge const &b) {
-        return a.weight < b.weight;
-    }
-};
-
-struct CompBuild { /* comparator for pq to compare edge weights */
-    bool operator()(Edge const &a, Edge const &b) {
-        return a.weight > b.weight;
-    }
 };
 
 int find(std::vector<int> &parent, int index) {
@@ -50,17 +36,27 @@ void unionSets(std::vector<int> &parent, std::vector<int> &size, int index1, int
     }
 }
 
+struct CompDestroy { /* comparator for pq to compare edge weights */
+    bool operator()(Edge const &a, Edge const &b) {
+        return a.weight < b.weight;
+    }
+};
+
+struct CompBuild { /* comparator for pq to compare edge weights */
+    bool operator()(Edge const &a, Edge const &b) {
+        return a.weight > b.weight;
+    }
+};
+
 struct Graph {
-    std::vector<std::vector<Edge>> edges;                           /* adjacency list for Prim's */
-    std::priority_queue<Edge, std::vector<Edge>, CompBuild> cost;   /* edge list for Kruskal's */
-    std::vector<int> size;                                          /* size of tree */
-    int nvertices;                                                  /* number of vertices in graph */
-    int nedges;                                                     /* number of edges in graph */
-    bool directed;                                                  /* is the graph directed */
-    void insertEdge(int, int);                                      /* insert edge, nodes are 1 indexed */
-    
-    Graph(bool d) : directed(d){};                                  /* constructor */
-    void readGraph();                                               /* read graph from standard input */
+    std::priority_queue<Edge, std::vector<Edge>, CompDestroy> current;  /* edge list for existing edges */
+    std::priority_queue<Edge, std::vector<Edge>, CompBuild> cost;       /* edge list for cost to build edges */
+    std::vector<int> size;                                              /* size of trees */
+    std::vector<int> parent;                                            /* parent node */
+    int nvertices;                                                      /* number of vertices in graph */
+
+    void readGraph();                                                   /* read graph from standard input */
+    int buildTree();                                                    /* find minimum cost to build spanning tree */
 };
 
 int convert(char c) { /* helper function to convert char value to edge weight */
@@ -73,91 +69,64 @@ void Graph::readGraph() {
     /* expected input format is twoo strings representing edge matrix
     i.e.: 011,101,110 ABB,BAB,BBA ABB,BAB,BBA is existing edges, cost \
     to destroy, cost to build*/
+
+    /* read values */
     std::string c, b, d;
     std::cin >> c >> b >> d;
     nvertices = c.find(',');
     if (nvertices < 0) {
         return;
     }
-    edges = std::vector<std::vector<Edge>>(nvertices); 
+
+    /* init vectors */
+    size = std::vector<int>(nvertices, 1);
+    parent = std::vector<int>(nvertices, 0);
+    std::iota(parent.begin(), parent.end(), 0);
+
+    /* insert edges into queue */
     int index, destroy, build;
     for (int i = 0; i < nvertices; i++) {
         for (int j = i + 1; j < nvertices; j++) {
             index = ((nvertices + 1) * i) + j;
-            if (c[index] - '0') {
+            if (c[index] - '0') {               /* if exists */
                 destroy = convert(d[index]);
-                edges[i].push_back(Edge(i, j, destroy));
-                edges[j].push_back(Edge(j, i, destroy));
+                current.push(Edge(i, j, destroy));
+            } else {                            /* if doesn't exist*/
+                build = convert(b[index]);
+                cost.push(Edge(i, j, build));
             }
-            build = convert(b[index]);
-            cost.push(Edge(i, j, build));
         }
     }
-    size = std::vector<int>(nvertices, 1);
 }
 
-int primModified(std::vector<int> &parent, std::vector<bool> &inTree, Graph &g, int start) {
-    std::priority_queue<Edge, std::vector<Edge>, CompDestroy> pq;
-
-    for (auto edge : g.edges[start]) {
-        if (!inTree[edge.y]) {
-            pq.push(edge);
-        }
-    }
-
-    inTree[start] = true;
-    int weight = 0;
-    Edge vertex;
-
-    while (!pq.empty()) {
-        vertex = pq.top();
-        pq.pop();
-        if (!inTree[vertex.y]) {
-            inTree[vertex.y] = true;
-            parent[vertex.y] = vertex.x;
-            for (auto edge : g.edges[vertex.y]) {
-                if (!inTree[edge.y]) {
-                    pq.push(edge);
-                }
-            }
+int Graph::buildTree() {
+    int total = 0;
+    Edge edge;
+    while (!current.empty()) {
+        edge = current.top();
+        current.pop();
+        if (!sameComponent(parent, edge.x, edge.y)) {
+            unionSets(parent, size, edge.x, edge.y);
         } else {
-            weight += vertex.weight; /* cost of removing back edge */
+            total += edge.weight;
         }
     }
 
-    return weight;
+    while (!cost.empty()) {
+        edge = cost.top();
+        cost.pop();
+        if (!sameComponent(parent, edge.x, edge.y)) {
+            total += edge.weight;
+            unionSets(parent, size, edge.x, edge.y);
+        }
+    }
+
+    return total;
 }
 
 int main() {
-    Graph g(true);
+    Graph g;
     g.readGraph();
-    if (g.nvertices < 0) {
-        std::cout << 0 << std::endl;
-        return 0;
-    }
-    std::vector<bool> inTree(g.nvertices, false);
-    std::vector<int> parent(g.nvertices);
-    std::iota(parent.begin(), parent.end(), 0);
-    int cost = 0;
-
-    for (int i = 0; i < g.nvertices; i++) {
-        if (!inTree[i]) {
-            cost += primModified(parent, inTree, g, i);
-        }
-    }
-    for (size_t i = 0; i < parent.size(); i++) {
-        parent[i] = find(parent, i);
-    }
-    
-    Edge edge;
-    while (!g.cost.empty()) {
-        edge = g.cost.top();
-        g.cost.pop();
-        if (!sameComponent(parent, edge.x, edge.y)) {
-            cost += edge.weight;
-            unionSets(parent, g.size, edge.x, edge.y);
-        }
-    }
-    
+    int cost = g.buildTree();
     std::cout << cost << std::endl;
 }
